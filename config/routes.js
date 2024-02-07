@@ -10,4 +10,5 @@
 
 module.exports.routes = {
   "POST /tables/get": "DatabaseController.getTables",
+  "POST /procedures/get": "DatabaseController.getProcedures",
 };

@@ -27,6 +27,7 @@ const DATABASE_NAMES = {
 const KEYWORDS = {
   BASE_TALE: "BASE TABLE",
   VIEW: "VIEW",
+  PROCEDURE: "PROCEDURE",
 };
 
 module.exports.constants = {

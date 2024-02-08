@@ -31,7 +31,7 @@ module.exports = {
                           `;
 
       let whereClause = `\n WHERE 
-                              table_type = '${KEYWORDS.PROCEDURE}'
+                              routine_type = '${KEYWORDS.PROCEDURE}'
                         `;
 
       const orderClause = `\n ORDER BY routine_name`;

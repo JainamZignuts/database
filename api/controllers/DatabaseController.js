@@ -245,14 +245,6 @@ module.exports = {
         });
       }
 
-      let selectClause = `
-              SELECT routine_name
-              FROM information_schema.routines
-          `;
-
-      let whereClause = `WHERE routine_type = '${KEYWORDS.PROCEDURE}'`;
-      const orderClause = "\n ORDER BY routine_name";
-
       let result = [];
 
       //if db type is postgres

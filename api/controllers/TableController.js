@@ -279,4 +279,214 @@ module.exports = {
       });
     }
   },
+  /**
+   * @name createTable
+   * @file DatabaseController.js
+   * @param {Request} req
+   * @param {Response} res
+   * @throwsF
+   * @description This method will create table in the database
+   * @author Jainam Shah (Zignuts)
+   */
+  createTable: async (req, res) => {
+    try {
+      const { connectionId, tableName, columns, primaryKey, constraints } =
+        req.body;
+
+      // {
+      //   "dbName": "postgresql",
+      //   "tableName": "example_table",
+      //   "columns": [
+      //     {"name": "id", "type": "serial", "default": null},
+      //     {"name": "username", "type": "varchar(50)", "default": "'John Doe'"},
+      //     {"name": "email", "type": "varchar(100)", "default": null},
+      //     {"name": "age", "type": "int", "default": 25},
+      //     {"name": "is_active", "type": "boolean", "default": true}
+      //   ],
+      //   "primaryKey": "id",
+      //   "constraints": [
+      //     {"type": "UNIQUE", "columns": ["username", "email"]},
+      //     {"type": "CHECK", "expression": "age >= 18"}
+      //   ]
+      // }
+
+      /* The `validationObject` is an object that defines the validation rules for the parameters used
+      in the `addForeignKey` method. Each property in the `validationObject` represents a parameter,
+      and its value represents the validation rule for that parameter. */
+      const validationObject = {
+        connectionId: VALIDATION_RULES.COMMON.STRING,
+        tableName: VALIDATION_RULES.COMMON.STRING,
+        primaryKey: VALIDATION_RULES.COMMON.STRING,
+      };
+
+      /* The below code is creating a constant variable called `validationData` and assigning it an object
+    with one property: `connection`. */
+      const validationData = {
+        connectionId,
+        tableName,
+        primaryKey,
+      };
+
+      // perform validation method
+      const validation = new VALIDATOR(validationData, validationObject);
+
+      // if any rule is violated send validation response
+      if (validation.fails()) {
+        //if any rule is violated send validation response
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
+          status: HTTP_STATUS_CODE.BAD_REQUEST,
+          message: "",
+          data: "",
+          error: validation.errors.all(),
+        });
+      }
+
+      //if columns are not provided then send validation response
+      if (!columns || columns.length === 0) {
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
+          status: HTTP_STATUS_CODE.BAD_REQUEST,
+          message: "columns are required",
+          data: "",
+          error: "",
+        });
+      }
+
+      //check connection data in database
+      const connectionData = await Connections.findOne({
+        where: {
+          id: connectionId,
+          isDeleted: false,
+          isActive: true,
+        },
+        select: ["id", "url", "databaseType"],
+      });
+
+      //if connection data does not exist in database then send validation response
+      if (!connectionData) {
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
+          status: HTTP_STATUS_CODE.BAD_REQUEST,
+          message: "given connection details not exist in database",
+          data: "",
+          error: "",
+        });
+      }
+
+      // Function to generate a constraint name (MySQL specific)
+      function generateConstraintName(constraint) {
+        console.log("constraint: ", constraint);
+        return `${constraint.type}_${constraint.columns.join("_")}`;
+      }
+
+      /// Function to generate constraint definitions
+      function generateConstraints(dbName, constraints) {
+        // Implement constraint generation logic for both databases
+        return constraints
+          .map((constraint) => {
+            if (dbName === DATABASE_NAMES.POSTGRES) {
+              // PostgreSQL syntax
+              console.log("constraint: ", constraint);
+              if (constraint.type === "CHECK") {
+                return `CONSTRAINT ${constraint.name} CHECK (${constraint.expression})`;
+              } else {
+                return `${constraint.type} (${constraint.columns.join(", ")})`;
+              }
+            } else if (dbName === DATABASE_NAMES.MYSQL) {
+              // MySQL syntax
+              if (constraint.type === "CHECK") {
+                return `CONSTRAINT ${constraint.name} CHECK (${constraint.expression})`;
+              } else {
+                return `${constraint.type} (${constraint.columns.join(", ")})`;
+              }
+            }
+          })
+          .join(",\n");
+      }
+
+      // Function to generate column definitions
+      function generateColumns(columns) {
+        // Implement column generation logic for both databases
+        // Adjust data types and default values as needed
+        return columns
+          .map((column) => {
+            const defaultValue =
+              column.default !== undefined ? `DEFAULT ${column.default}` : "";
+            return `${column.name} ${column.type} ${defaultValue}`;
+          })
+          .join(",\n");
+      }
+
+      // Generate the CREATE TABLE query dynamically
+      const query = `
+                      CREATE TABLE IF NOT EXISTS ${tableName} (
+                        ${generateColumns(columns)},
+                        ${
+                          connectionData.databaseType ===
+                          DATABASE_NAMES.POSTGRES
+                            ? `CONSTRAINT ${tableName}_pkey PRIMARY KEY (${primaryKey})`
+                            : `PRIMARY KEY (${primaryKey})`
+                        },
+                        ${
+                          constraints && constraints.length > 0
+                            ? generateConstraints(
+                                connectionData.databaseType,
+                                constraints
+                              )
+                            : ""
+                        }
+                      );
+                    `;
+
+      //if db type is postgres
+      if (connectionData.databaseType === DATABASE_NAMES.POSTGRES) {
+        //execute query
+        const queryResult = await sails.helpers.postgres.executeQuery.with({
+          connection: connectionData.url,
+          query,
+        });
+
+        //if there is any error in helper then send error response
+        if (queryResult.code === "00") {
+          return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
+            status: HTTP_STATUS_CODE.SERVER_ERROR,
+            message: "",
+            data: "",
+            error: queryResult.errorMessage,
+          });
+        }
+      } else {
+        //execute query
+        const queryResult = await sails.helpers.mysql.executeQuery.with({
+          connection: connectionData.url,
+          query,
+        });
+
+        //if there is any error in helper then send error response
+        if (queryResult.code === "00") {
+          return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
+            status: HTTP_STATUS_CODE.SERVER_ERROR,
+            message: "",
+            data: "",
+            error: queryResult.errorMessage,
+          });
+        }
+      }
+      // return success response
+      return res.status(HTTP_STATUS_CODE.OK).json({
+        status: HTTP_STATUS_CODE.OK,
+        message: "",
+        data: true,
+        error: "",
+      });
+    } catch (error) {
+      console.log(error);
+
+      //return error response
+      return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
+        status: HTTP_STATUS_CODE.SERVER_ERROR,
+        message: "",
+        data: "",
+        error: error.message,
+      });
+    }
+  },
 };

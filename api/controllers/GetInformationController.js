@@ -1,5 +1,5 @@
 /**
- * DatabaseController
+ * GetInformationController
  *
  * @description :: Server-side actions for handling incoming requests.
  * @help        :: See https://sailsjs.com/docs/concepts/actions
@@ -11,30 +11,30 @@ const VALIDATION_RULES = sails.config.validationRules;
 module.exports = {
   /**
    * @name getTables
-   * @file DatabaseController.js
+   * @file GetInformationController.js
    * @param {Request} req
    * @param {Response} res
    * @throwsF
-   * @description This method will check and retrieve given connection's table
+   * @description This method will check and retrieve given connection's tables
    * @author Jainam Shah  (Zignuts)
    */
   getTables: async (req, res) => {
     try {
-      //get connection string from body
-      const { connection } = req.body;
+      //get connectionId string from body
+      const { connectionId } = req.body;
 
-      /* The `validationObject` is an object that defines the validation rules for the `connection`
-     parameter. In this case, it specifies that the `connection` parameter should be a valid URL.
-     This object is used later to perform validation on the `connection` parameter using the
+      /* The `validationObject` is an object that defines the validation rules for the `connectionId`
+     parameter. In this case, it specifies that the `connectionId` parameter should be a valid URL.
+     This object is used later to perform validation on the `connectionId` parameter using the
      `VALIDATOR` class. */
       const validationObject = {
-        connection: VALIDATION_RULES.CONNECTION.URL,
+        connectionId: VALIDATION_RULES.COMMON.STRING,
       };
 
       /* The below code is creating a constant variable called `validationData` and assigning it an object
-      with one property: `connection`. */
+      with one property: `connectionId`. */
       const validationData = {
-        connection,
+        connectionId,
       };
 
       // perform validation method
@@ -51,17 +51,21 @@ module.exports = {
         });
       }
 
-      //this helper validates collection url and return its database name
-      const dbType = await sails.helpers.utils.validateConnectionUrl(
-        connection
-      );
+      //check connection data in database
+      const connectionData = await Connections.findOne({
+        where: {
+          id: connectionId,
+          isDeleted: false,
+          isActive: true,
+        },
+        select: ["id", "url", "databaseName", "databaseType"],
+      });
 
-      //if given connection url does not match our defined database then send validation response
-      if (!dbType) {
+      //if connection data does not exist in database then send validation response
+      if (!connectionData) {
         return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
           status: HTTP_STATUS_CODE.BAD_REQUEST,
-          message:
-            "given connection url is not of postgres or mysql connection",
+          message: "given connection details not exist in database",
           data: "",
           error: "",
         });
@@ -70,7 +74,7 @@ module.exports = {
       let result = [];
 
       //if db type is postgres
-      if (dbType === DATABASE_NAMES.POSTGRES) {
+      if (connectionData.databaseType === DATABASE_NAMES.POSTGRES) {
         //construct get tables query for postgres
         const queryClauses = await sails.helpers.postgres.query.getTables();
 
@@ -99,7 +103,7 @@ module.exports = {
 
         //execute query
         const queryResult = await sails.helpers.postgres.executeQuery.with({
-          connection,
+          connection: connectionData.url,
           query,
         });
 
@@ -133,13 +137,8 @@ module.exports = {
         let { selectClause, fromClause, whereClause, orderClause } =
           queryClauses.data;
 
-        //extract db name from connection url
-        const connectionParts = connection.split("/");
-        const dbName =
-          connectionParts[connectionParts.length - 1].split("?")[0];
-
         //add condition of table schema in where clause
-        whereClause += `\n AND table_schema = '${dbName}'`;
+        whereClause += `\n AND table_schema = '${connectionData.databaseName}'`;
 
         //construct query by combining all clauses
         const query = selectClause
@@ -149,7 +148,7 @@ module.exports = {
 
         //execute query
         const queryResult = await sails.helpers.mysql.executeQuery.with({
-          connection,
+          connection: connectionData.url,
           query,
         });
 
@@ -188,8 +187,8 @@ module.exports = {
   },
 
   /**
-   * @name getTables
-   * @file DatabaseController.js
+   * @name getProcedures
+   * @file GetInformationController.js
    * @param {Request} req
    * @param {Response} res
    * @throwsF
@@ -198,21 +197,21 @@ module.exports = {
    */
   getProcedures: async (req, res) => {
     try {
-      //get connection string from body
-      const { connection } = req.body;
+      //get connectionId string from body
+      const { connectionId } = req.body;
 
-      /* The `validationObject` is an object that defines the validation rules for the `connection`
-     parameter. In this case, it specifies that the `connection` parameter should be a valid URL.
-     This object is used later to perform validation on the `connection` parameter using the
+      /*connectionId The `validationObject` is an object that defines the validation rules for the `connectionId`
+     parameter. In this case, it specifies that the `connectionId` parameter should be a valid URL.
+     This object is used later to perform validation on the `connectionId` parameter using the
      `VALIDATOR` class. */
       const validationObject = {
-        connection: VALIDATION_RULES.CONNECTION.URL,
+        connectionId: VALIDATION_RULES.COMMON.STRING,
       };
 
       /* The below code is creating a constant variable called `validationData` and assigning it an object
-    with one property: `connection`. */
+    with one property: `connectionId`. */
       const validationData = {
-        connection,
+        connectionId,
       };
 
       // perform validation method
@@ -229,17 +228,21 @@ module.exports = {
         });
       }
 
-      //this helper validates collection url and return its database name
-      const dbType = await sails.helpers.utils.validateConnectionUrl(
-        connection
-      );
+      //check connection data in database
+      const connectionData = await Connections.findOne({
+        where: {
+          id: connectionId,
+          isDeleted: false,
+          isActive: true,
+        },
+        select: ["id", "url", "databaseName", "databaseType"],
+      });
 
-      //if given connection url does not match our defined database then send validation response
-      if (!dbType) {
+      //if connection data does not exist in database then send validation response
+      if (!connectionData) {
         return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
           status: HTTP_STATUS_CODE.BAD_REQUEST,
-          message:
-            "given connection url is not of postgres or mysql connection",
+          message: "given connection details not exist in database",
           data: "",
           error: "",
         });
@@ -248,7 +251,7 @@ module.exports = {
       let result = [];
 
       //if db type is postgres
-      if (dbType === DATABASE_NAMES.POSTGRES) {
+      if (connectionData.databaseType === DATABASE_NAMES.POSTGRES) {
         //construct get tables query for postgres
         const queryClauses = await sails.helpers.postgres.query.getProcedures();
 
@@ -274,7 +277,7 @@ module.exports = {
 
         //execute query
         const queryResult = await sails.helpers.postgres.executeQuery.with({
-          connection,
+          connection: connectionData.url,
           query,
         });
 
@@ -308,13 +311,8 @@ module.exports = {
         let { selectClause, fromClause, whereClause, orderClause } =
           queryClauses.data;
 
-        //extract db name from connection url
-        const connectionParts = connection.split("/");
-        const dbName =
-          connectionParts[connectionParts.length - 1].split("?")[0];
-
         //add condition of routine schema in where clause
-        whereClause += `\n AND routine_schema = '${dbName}'`;
+        whereClause += `\n AND routine_schema = '${connectionData.databaseName}'`;
 
         //construct query by combining all clauses
         const query = selectClause
@@ -324,7 +322,7 @@ module.exports = {
 
         //execute query
         const queryResult = await sails.helpers.mysql.executeQuery.with({
-          connection,
+          connection: connectionData.url,
           query,
         });
 

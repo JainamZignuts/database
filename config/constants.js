@@ -1,3 +1,5 @@
+require("dotenv").config();
+const { v4: uuidv4 } = require("uuid");
 const VALIDATOR = require("validatorjs");
 const MYSQL = require("mysql2/promise");
 let { Pool } = require("pg");
@@ -31,6 +33,7 @@ const KEYWORDS = {
 };
 
 module.exports.constants = {
+  UUID: uuidv4,
   HTTP_STATUS_CODE,
   VALIDATOR,
   MYSQL,

@@ -9,6 +9,8 @@
  */
 
 module.exports.routes = {
-  "POST /tables/get": "DatabaseController.getTables",
-  "POST /procedures/get": "DatabaseController.getProcedures",
+  "POST /connection/create": "ConnectionController.create",
+  "POST /tables/get": "GetInformationController.getTables",
+  "POST /procedures/get": "GetInformationController.getProcedures",
+  "POST /foreign-key/add": "TableController.addForeignKey",
 };

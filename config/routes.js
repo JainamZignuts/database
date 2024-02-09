@@ -12,5 +12,6 @@ module.exports.routes = {
   "POST /connection/create": "ConnectionController.create",
   "POST /tables/get": "GetInformationController.getTables",
   "POST /procedures/get": "GetInformationController.getProcedures",
-  "POST /foreign-key/add": "TableController.addForeignKey",
+  "POST /foreign-key/create": "TableController.createForeignKey",
+  "POST /index/create": "TableController.createIndex",
 };

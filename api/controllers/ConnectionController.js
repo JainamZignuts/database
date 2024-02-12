@@ -156,4 +156,52 @@ module.exports = {
       });
     }
   },
+
+  /**
+   * @name get
+   * @file ConnectionController.js
+   * @param {Request} req
+   * @param {Response} res
+   * @throwsF
+   * @description This method will retrieve connections from database
+   * @author Jainam Shah  (Zignuts)
+   */
+  get: async (req, res) => {
+    try {
+      //get connections from database
+      const connections = await Connections.find({
+        where: {
+          isDeleted: false,
+        },
+        select: ["id", "url"],
+      });
+
+      if (!connections) {
+        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
+          status: HTTP_STATUS_CODE.BAD_REQUEST,
+          message: "No Connections found",
+          data: "",
+          error: "",
+        });
+      }
+
+      // return success response
+      return res.status(HTTP_STATUS_CODE.OK).json({
+        status: HTTP_STATUS_CODE.OK,
+        message: "",
+        data: connections,
+        error: "",
+      });
+    } catch (error) {
+      console.log(error);
+
+      //return error response
+      return res.status(HTTP_STATUS_CODE.SERVER_ERROR).json({
+        status: HTTP_STATUS_CODE.SERVER_ERROR,
+        message: "",
+        data: "",
+        error: error.message,
+      });
+    }
+  },
 };

@@ -560,13 +560,14 @@ module.exports = {
       //if db type is postgres
       if (connectionData.databaseType === DATABASE_NAMES.POSTGRES) {
         const createClause = `
+        BEGIN
         ${queryToAdd};  
         `;
 
-        const languageClause = `\n  LANGUAGE sql
+        const languageClause = `\n  LANGUAGE plpgsql
         AS $$`;
 
-        const endClause = `\n  $$;`;
+        const endClause = `\n END; $$;`;
 
         query = query
           .concat(languageClause)
